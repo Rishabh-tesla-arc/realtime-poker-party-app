@@ -4,6 +4,7 @@ import { WebSocketServer } from "ws";
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 5174;
 const MAX_SEATS = 10;
+const HOST_PASSWORD = process.env.HOST_PASSWORD || "host123";
 const BLINDS = { small: 5, big: 10 };
 
 const SUITS = ["spades", "hearts", "clubs", "diamonds"];
@@ -601,7 +602,7 @@ wss.on("connection", (ws) => {
     if (!message || !message.type) return;
 
     if (message.type === "JOIN") {
-      const { name, roomId } = message.payload || {};
+      const { name, roomId, hostKey } = message.payload || {};
       const room = getRoom(roomId || "lobby");
       if (room.players.length >= room.maxPlayers) {
         send(ws, { type: "INFO", payload: { text: "Table is full." } });
@@ -629,7 +630,9 @@ wss.on("connection", (ws) => {
         needsProfile: true,
       };
       room.players.push(player);
-      if (!room.hostId) room.hostId = clientId;
+      if (!room.hostId && hostKey && hostKey === HOST_PASSWORD) {
+        room.hostId = clientId;
+      }
       connections.set(ws, { playerId: clientId, roomId: room.id });
       broadcast(room, {
         type: "INFO",
@@ -748,7 +751,7 @@ wss.on("connection", (ws) => {
     const leaving = room.players.find((player) => player.id === meta.playerId);
     room.players = room.players.filter((player) => player.id !== meta.playerId);
     if (room.hostId === meta.playerId) {
-      room.hostId = room.players[0]?.id || null;
+      room.hostId = null;
     }
     if (room.players.length === 0) {
       rooms.delete(room.id);

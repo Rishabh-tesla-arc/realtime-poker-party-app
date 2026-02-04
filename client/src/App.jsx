@@ -21,6 +21,7 @@ const MAX_SEATS = 10;
 const STORAGE_KEYS = {
   name: "poker.profile.name",
   color: "poker.profile.color",
+  hostKey: "poker.host.key",
 };
 const colorOptions = [
   "#f4c35a",
@@ -41,6 +42,10 @@ export default function App() {
   const [playerName, setPlayerName] = useState(() => {
     if (typeof window === "undefined") return "Player";
     return window.localStorage.getItem(STORAGE_KEYS.name) || "Player";
+  });
+  const [hostKey, setHostKey] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return window.localStorage.getItem(STORAGE_KEYS.hostKey) || "";
   });
   const [socket, setSocket] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState("disconnected");
@@ -77,7 +82,11 @@ export default function App() {
       socket.send(
         JSON.stringify({
           type: "JOIN",
-          payload: { name: playerName || "Player", roomId },
+          payload: {
+            name: playerName || "Player",
+            roomId,
+            hostKey: hostKey || undefined,
+          },
         })
       );
     };
@@ -280,6 +289,20 @@ export default function App() {
               onChange={(event) => setPlayerName(event.target.value)}
             />
           </label>
+          <label className="control">
+            Host Key
+            <input
+              value={hostKey}
+              onChange={(event) => {
+                const value = event.target.value;
+                setHostKey(value);
+                if (typeof window !== "undefined") {
+                  window.localStorage.setItem(STORAGE_KEYS.hostKey, value);
+                }
+              }}
+              placeholder="Optional"
+            />
+          </label>
           <button className="btn btn-primary" onClick={connect}>
             {connectionStatus === "connected" ? "Reconnect" : "Connect"}
           </button>
@@ -291,267 +314,284 @@ export default function App() {
       </header>
 
       <main className="table-layout">
-        <section className="table-wrap">
-          <div className="table">
-            <div className="table-sheen" />
-            <div className="board">
-              <div className="pot">
-                <span className="label">Pot</span>
-                <span className="value">${roomState?.pot ?? 0}</span>
-                {(roomState?.sidePots || []).map((pot, index) => (
-                  <span key={index} className="side-pot">
-                    Side pot {index + 1}: ${pot.amount}
+        {isHost ? (
+          <aside className="side-panel">
+            {!roomState?.handActive && (
+              <div className="panel-card">
+                <div className="panel-title">Table Info</div>
+                <div className="panel-row">
+                  <span>Room</span>
+                  <span>{roomId}</span>
+                </div>
+                <div className="panel-row">
+                  <span>Players</span>
+                  <span>{roomState?.players.length || 0}/{maxPlayers}</span>
+                </div>
+                <div className="panel-row">
+                  <span>Blinds</span>
+                  <span>$5 / $10</span>
+                </div>
+                <div className="panel-row">
+                  <span>Buy-in</span>
+                  <span>${initialStack}</span>
+                </div>
+                <div className="panel-row">
+                  <span>Game Speed</span>
+                  <span>{localSpeed} ms</span>
+                </div>
+                <div className="panel-row">
+                  <span>Seats</span>
+                  <span>{maxPlayers}</span>
+                </div>
+                <div className="speed-control">
+                  <input
+                    type="range"
+                    min="2"
+                    max="10"
+                    step="1"
+                    value={localMaxPlayers}
+                    onChange={(event) => {
+                      const value = Number(event.target.value);
+                      setLocalMaxPlayers(value);
+                      if (isHost) {
+                        sendAction("SET_MAX_PLAYERS", { maxPlayers: value });
+                      }
+                    }}
+                    disabled={!canControlGame}
+                  />
+                  <span className="speed-hint">
+                    {isHost ? "Host controls seats" : "Host controls seats"}
                   </span>
-                ))}
-              </div>
-              <div className="community-cards">
-                {(roomState?.community || []).map((card) => (
-                  <div
-                    key={`${card.suit}-${card.rank}`}
-                    className={`card ${
-                      card.suit === "hearts" || card.suit === "diamonds" ? "red" : ""
-                    }`}
-                    data-rank={card.label}
+                </div>
+                <div className="name-editor">
+                  <input
+                    type="number"
+                    min="100"
+                    max="10000"
+                    step="100"
+                    value={localInitialStack}
+                    onChange={(event) =>
+                      setLocalInitialStack(Number(event.target.value))
+                    }
+                    placeholder="Buy-in"
+                  />
+                  <button
+                    className="btn btn-ghost"
+                    onClick={() =>
+                      sendAction("SET_INITIAL_STACK", { initialStack: localInitialStack })
+                    }
+                    disabled={!canControlGame}
                   >
-                    <span className="suit">{SUIT_MAP[card.suit]}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="betting-banner">
-                {roomState ? STAGE_LABELS[roomState.stage] : "Waiting"}
-              </div>
-            </div>
-
-            <div className="seats">
-              {seats.map((player, index) => {
-                if (!player) {
-                  return (
-                    <div
-                      key={index}
-                      className={`seat seat-${index}`}
-                      style={seatPositions[index]}
-                    >
-                      <div className="player empty">
-                        <div className="avatar muted" />
-                        <div className="player-info">
-                          <span className="player-name">Empty Seat</span>
-                          <span className="player-stack">--</span>
-                        </div>
-                        <div className="player-status">Waiting...</div>
-                      </div>
-                    </div>
-                  );
-                }
-
-                const reveal =
-                  player.id === hero?.id ||
-                  roomState?.revealHands ||
-                  !roomState?.handActive;
-                const showBacks = !reveal && !player.folded;
-                const isDealer = roomState?.dealerIndex === player.seatIndex;
-                const isBetting =
-                  roomState?.handActive && currentPlayer?.id === player.id;
-                const seatEffects = effects.filter(
-                  (item) => item.seatIndex === player.seatIndex
-                );
-
-                return (
-                  <div
-                    key={player.id}
-                    className={`seat seat-${index}`}
-                    style={seatPositions[index]}
+                    Set Buy-in
+                  </button>
+                </div>
+                <div className="speed-control">
+                  <input
+                    type="range"
+                    min="300"
+                    max="2000"
+                    step="100"
+                    value={localSpeed}
+                    onChange={(event) => {
+                      const value = Number(event.target.value);
+                      setLocalSpeed(value);
+                      if (isHost) {
+                        sendAction("SET_SPEED", { speedMs: value });
+                      }
+                    }}
+                    disabled={!canControlGame}
+                  />
+                  <span className="speed-hint">
+                    {isHost ? "Host controls speed" : "Host controls speed"}
+                  </span>
+                </div>
+                <div className="panel-row">
+                  <span>Your Name</span>
+                  <span>{hero?.name || playerName}</span>
+                </div>
+                <div className="name-editor">
+                  <input
+                    value={playerName}
+                    onChange={(event) => setPlayerName(event.target.value)}
+                    placeholder="Enter name"
+                  />
+                  <button
+                    className="btn btn-ghost"
+                    onClick={() => sendAction("SET_NAME", { name: playerName })}
+                    disabled={!hero || profileRequired}
                   >
-                    <div
-                      className={`player ${
-                        roomState?.handActive &&
-                        currentPlayer?.id === player.id
-                          ? "active"
-                          : ""
-                      }`}
-                    >
-                      <div className="avatar" style={{ background: player.avatar }} />
-                      <div className="player-info">
-                        <span className={`player-name ${isBetting ? "betting" : ""}`}>
-                          {player.name}
-                          {isBetting && <span className="betting-dot" />}
-                        </span>
-                        <span className="player-stack">${player.stack}</span>
-                      </div>
-                      <div className="player-tags">
-                        {player.id === hero?.id && (
-                          <span className="player-tag">You</span>
-                        )}
-                        {isDealer && <span className="player-tag gold">Dealer</span>}
-                        {player.allIn && <span className="player-tag red">All In</span>}
-                      </div>
-                      <div className="player-bet">
-                        {player.bet > 0 ? `Bet: $${player.bet}` : ""}
-                      </div>
-                      <div className="player-cards">
-                        {player.hand.map((card, idx) =>
-                          showBacks ? (
-                            <div key={idx} className="card back" />
-                          ) : (
-                            <div
-                              key={`${card.suit}-${card.rank}`}
-                              className={`card ${
-                                card.suit === "hearts" ||
-                                card.suit === "diamonds"
-                                  ? "red"
-                                  : ""
-                              }`}
-                              data-rank={card.label}
-                            >
-                              <span className="suit">{SUIT_MAP[card.suit]}</span>
-                            </div>
-                          )
-                        )}
-                      </div>
-                      <div className="player-status">{player.status}</div>
-                      {seatEffects.map((effect) => (
-                        <div
-                          key={effect.id}
-                          className={`float-amount ${effect.type}`}
-                        >
-                          {effect.type === "bet" ? `-$${effect.amount}` : `+$${effect.amount}`}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        <aside className="side-panel">
-          {!roomState?.handActive && (
-            <div className="panel-card">
-            <div className="panel-title">Table Info</div>
-            <div className="panel-row">
-              <span>Room</span>
-              <span>{roomId}</span>
-            </div>
-            <div className="panel-row">
-              <span>Players</span>
-              <span>{roomState?.players.length || 0}/{maxPlayers}</span>
-            </div>
-            <div className="panel-row">
-              <span>Blinds</span>
-              <span>$5 / $10</span>
-            </div>
-            <div className="panel-row">
-              <span>Buy-in</span>
-              <span>${initialStack}</span>
-            </div>
-            <div className="panel-row">
-              <span>Game Speed</span>
-              <span>{localSpeed} ms</span>
-            </div>
-            <div className="panel-row">
-              <span>Seats</span>
-              <span>{maxPlayers}</span>
-            </div>
-            <div className="speed-control">
-              <input
-                type="range"
-                min="2"
-                max="10"
-                step="1"
-                value={localMaxPlayers}
-                onChange={(event) => {
-                  const value = Number(event.target.value);
-                  setLocalMaxPlayers(value);
-                  if (isHost) {
-                    sendAction("SET_MAX_PLAYERS", { maxPlayers: value });
-                  }
-                }}
-                disabled={!canControlGame}
-              />
-              <span className="speed-hint">
-                {isHost ? "Host controls seats" : "Host controls seats"}
-              </span>
-            </div>
-            <div className="name-editor">
-              <input
-                type="number"
-                min="100"
-                max="10000"
-                step="100"
-                value={localInitialStack}
-                onChange={(event) => setLocalInitialStack(Number(event.target.value))}
-                placeholder="Buy-in"
-              />
-              <button
-                className="btn btn-ghost"
-                onClick={() =>
-                  sendAction("SET_INITIAL_STACK", { initialStack: localInitialStack })
-                }
-                disabled={!canControlGame}
-              >
-                Set Buy-in
-              </button>
-            </div>
-            <div className="speed-control">
-              <input
-                type="range"
-                min="300"
-                max="2000"
-                step="100"
-                value={localSpeed}
-                onChange={(event) => {
-                  const value = Number(event.target.value);
-                  setLocalSpeed(value);
-                  if (isHost) {
-                    sendAction("SET_SPEED", { speedMs: value });
-                  }
-                }}
-                disabled={!canControlGame}
-              />
-              <span className="speed-hint">
-                {isHost ? "Host controls speed" : "Host controls speed"}
-              </span>
-            </div>
-            <div className="panel-row">
-              <span>Your Name</span>
-              <span>{hero?.name || playerName}</span>
-            </div>
-            <div className="name-editor">
-              <input
-                value={playerName}
-                onChange={(event) => setPlayerName(event.target.value)}
-                placeholder="Enter name"
-              />
-              <button
-                className="btn btn-ghost"
-                onClick={() => sendAction("SET_NAME", { name: playerName })}
-                disabled={!hero || profileRequired}
-              >
-                Update
-              </button>
-            </div>
-          </div>
-          )}
-
-          <div className="panel-card">
-            <div className="panel-title">Hand Rankings</div>
-            <button
-              className="btn btn-ghost"
-              onClick={() => setShowRules((prev) => !prev)}
-            >
-              {showRules ? "Hide Guide" : "Show Guide"}
-            </button>
-            {showRules && (
-              <img
-                src="/images.png"
-                alt="Poker hand rankings reference"
-                className="rules-image"
-              />
+                    Update
+                  </button>
+                </div>
+              </div>
             )}
-          </div>
-        </aside>
+          </aside>
+        ) : (
+          <>
+            <section className="table-wrap">
+              <div className="table">
+                <div className="table-sheen" />
+                <div className="board">
+                  <div className="pot">
+                    <span className="label">Pot</span>
+                    <span className="value">${roomState?.pot ?? 0}</span>
+                    {(roomState?.sidePots || []).map((pot, index) => (
+                      <span key={index} className="side-pot">
+                        Side pot {index + 1}: ${pot.amount}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="community-cards">
+                    {(roomState?.community || []).map((card) => (
+                      <div
+                        key={`${card.suit}-${card.rank}`}
+                        className={`card ${
+                          card.suit === "hearts" || card.suit === "diamonds"
+                            ? "red"
+                            : ""
+                        }`}
+                        data-rank={card.label}
+                      >
+                        <span className="suit">{SUIT_MAP[card.suit]}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="betting-banner">
+                    {roomState ? STAGE_LABELS[roomState.stage] : "Waiting"}
+                  </div>
+                </div>
+
+                <div className="seats">
+                  {seats.map((player, index) => {
+                    if (!player) {
+                      return (
+                        <div
+                          key={index}
+                          className={`seat seat-${index}`}
+                          style={seatPositions[index]}
+                        >
+                          <div className="player empty">
+                            <div className="avatar muted" />
+                            <div className="player-info">
+                              <span className="player-name">Empty Seat</span>
+                              <span className="player-stack">--</span>
+                            </div>
+                            <div className="player-status">Waiting...</div>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    const reveal =
+                      player.id === hero?.id ||
+                      roomState?.revealHands ||
+                      !roomState?.handActive;
+                    const showBacks = !reveal && !player.folded;
+                    const isDealer = roomState?.dealerIndex === player.seatIndex;
+                    const isBetting =
+                      roomState?.handActive && currentPlayer?.id === player.id;
+                    const seatEffects = effects.filter(
+                      (item) => item.seatIndex === player.seatIndex
+                    );
+
+                    return (
+                      <div
+                        key={player.id}
+                        className={`seat seat-${index}`}
+                        style={seatPositions[index]}
+                      >
+                        <div
+                          className={`player ${
+                            roomState?.handActive &&
+                            currentPlayer?.id === player.id
+                              ? "active"
+                              : ""
+                          }`}
+                        >
+                          <div className="avatar" style={{ background: player.avatar }} />
+                          <div className="player-info">
+                            <span className={`player-name ${isBetting ? "betting" : ""}`}>
+                              {player.name}
+                              {isBetting && <span className="betting-dot" />}
+                            </span>
+                            <span className="player-stack">${player.stack}</span>
+                          </div>
+                          <div className="player-tags">
+                            {player.id === hero?.id && (
+                              <span className="player-tag">You</span>
+                            )}
+                            {isDealer && (
+                              <span className="player-tag gold">Dealer</span>
+                            )}
+                            {player.allIn && (
+                              <span className="player-tag red">All In</span>
+                            )}
+                          </div>
+                          <div className="player-bet">
+                            {player.bet > 0 ? `Bet: $${player.bet}` : ""}
+                          </div>
+                          <div className="player-cards">
+                            {player.hand.map((card, idx) =>
+                              showBacks ? (
+                                <div key={idx} className="card back" />
+                              ) : (
+                                <div
+                                  key={`${card.suit}-${card.rank}`}
+                                  className={`card ${
+                                    card.suit === "hearts" ||
+                                    card.suit === "diamonds"
+                                      ? "red"
+                                      : ""
+                                  }`}
+                                  data-rank={card.label}
+                                >
+                                  <span className="suit">{SUIT_MAP[card.suit]}</span>
+                                </div>
+                              )
+                            )}
+                          </div>
+                          <div className="player-status">{player.status}</div>
+                          {seatEffects.map((effect) => (
+                            <div
+                              key={effect.id}
+                              className={`float-amount ${effect.type}`}
+                            >
+                              {effect.type === "bet"
+                                ? `-$${effect.amount}`
+                                : `+$${effect.amount}`}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </section>
+
+            <aside className="side-panel">
+              <div className="panel-card">
+                <div className="panel-title">Hand Rankings</div>
+                <button
+                  className="btn btn-ghost"
+                  onClick={() => setShowRules((prev) => !prev)}
+                >
+                  {showRules ? "Hide Guide" : "Show Guide"}
+                </button>
+                {showRules && (
+                  <img
+                    src="/images.png"
+                    alt="Poker hand rankings reference"
+                    className="rules-image"
+                  />
+                )}
+              </div>
+            </aside>
+          </>
+        )}
       </main>
 
+      {!isHost && (
       <section className="action-panel">
         <div className="action-info">
           <div className="turn-indicator">
@@ -647,8 +687,9 @@ export default function App() {
           </button>
         </div>
       </section>
+      )}
 
-      {showRules && (
+      {!isHost && showRules && (
         <div className="rules-modal" onClick={() => setShowRules(false)}>
           <div className="rules-modal-card" onClick={(event) => event.stopPropagation()}>
             <div className="rules-modal-header">
