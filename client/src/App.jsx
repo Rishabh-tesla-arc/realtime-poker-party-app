@@ -238,6 +238,14 @@ export default function App() {
     setSocket(new WebSocket(serverUrl));
   };
 
+  const disconnect = () => {
+    if (socket) socket.close();
+    setConnectionStatus("disconnected");
+    setRoomState(null);
+    setHostWaiting(false);
+    autoConnectRef.current = false;
+  };
+
   const sendAction = (type, payload = {}) => {
     if (!socket || connectionStatus !== "connected") return;
     socket.send(JSON.stringify({ type, payload }));
@@ -427,6 +435,11 @@ export default function App() {
             <span className="status-dot" />
             {connectionStatus}
           </div>
+          {connectionStatus === "connected" && (
+            <button className="btn btn-ghost" onClick={disconnect}>
+              Disconnect
+            </button>
+          )}
         </div>
       </header>
 

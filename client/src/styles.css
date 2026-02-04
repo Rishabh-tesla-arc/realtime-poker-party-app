@@ -803,19 +803,17 @@ input {
   }
 
   .seat {
-    width: 150px;
+    width: 120px;
   }
 
   .card {
-    width: 40px;
-    height: 56px;
+    width: 34px;
+    height: 48px;
   }
 
   .action-panel {
     flex-direction: column;
     align-items: stretch;
-    position: sticky;
-    bottom: 0;
   }
 
   .actions {
@@ -888,9 +886,23 @@ input {
     width: 100%;
     max-width: 100%;
     max-height: 55vh;
+    aspect-ratio: 16 / 9;
   }
 
   .table-wrap {
     height: 60vh;
+  }
+
+  .seat {
+    width: 110px;
+  }
+
+  .card {
+    width: 30px;
+    height: 44px;
+  }
+
+  .player-cards {
+    min-height: 52px;
   }
 }
