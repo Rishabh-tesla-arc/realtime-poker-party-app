@@ -23,6 +23,7 @@ const STORAGE_KEYS = {
   color: "poker.profile.color",
   hostKey: "poker.host.key",
   maxPlayers: "poker.maxPlayers",
+  role: "poker.role",
 };
 const colorOptions = [
   "#f4c35a",
@@ -64,7 +65,11 @@ export default function App() {
   const [localInitialStack, setLocalInitialStack] = useState(1000);
   const [carryOverBalances, setCarryOverBalances] = useState(true);
   const [showHandRankings, setShowHandRankings] = useState(false);
-  const [roleChoice, setRoleChoice] = useState("");
+  const [roleChoice, setRoleChoice] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return window.localStorage.getItem(STORAGE_KEYS.role) || "";
+  });
+  const [hostWaiting, setHostWaiting] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileName, setProfileName] = useState("");
   const [profileColor, setProfileColor] = useState("");
@@ -72,6 +77,7 @@ export default function App() {
   const reconnectTimer = useRef(null);
   const prevStateRef = useRef(null);
   const manualMaxPlayersRef = useRef(false);
+  const autoConnectRef = useRef(false);
 
   const hero = useMemo(() => {
     if (!roomState || !clientId) return null;
@@ -117,6 +123,7 @@ export default function App() {
       }
       if (message.type === "STATE") {
         setRoomState(message.payload);
+        setHostWaiting(false);
         if (message.payload.minRaise) {
           setRaiseAmount((prev) => Math.max(prev, message.payload.minRaise));
         }
@@ -135,10 +142,32 @@ export default function App() {
       }
       if (message.type === "INFO") {
         setInfoMessage(message.payload.text);
+        if (message.payload.text === "Host not online.") {
+          setHostWaiting(true);
+        }
         window.setTimeout(() => setInfoMessage(""), 3000);
       }
     };
   }, [socket, playerName, roomId]);
+
+  useEffect(() => {
+    if (autoConnectRef.current) return;
+    if (connectionStatus !== "disconnected") return;
+    if (roomState) return;
+    if (typeof window === "undefined") return;
+    const storedRole = window.localStorage.getItem(STORAGE_KEYS.role) || "";
+    const storedName = window.localStorage.getItem(STORAGE_KEYS.name) || "";
+    const storedHostKey = window.localStorage.getItem(STORAGE_KEYS.hostKey) || "";
+    if (!storedRole || !storedName) return;
+    if (storedRole === "host" && !storedHostKey) return;
+    autoConnectRef.current = true;
+    setRoleChoice(storedRole);
+    setPlayerName(storedName);
+    if (storedRole === "host") {
+      setHostKey(storedHostKey);
+    }
+    setTimeout(() => connect(), 0);
+  }, [connectionStatus, roomState]);
 
   useEffect(() => {
     if (!roomState) return;
@@ -277,7 +306,7 @@ export default function App() {
 
   return (
     <div className="app">
-      {!roomState && (
+      {!roomState && !autoConnectRef.current && (
         <div className="role-screen">
           <div className="role-card">
             <div className="role-title">Royal Felt Poker</div>
@@ -285,13 +314,23 @@ export default function App() {
             <div className="role-toggle">
               <button
                 className={`btn ${roleChoice === "host" ? "btn-primary" : ""}`}
-                onClick={() => setRoleChoice("host")}
+                onClick={() => {
+                  setRoleChoice("host");
+                  if (typeof window !== "undefined") {
+                    window.localStorage.setItem(STORAGE_KEYS.role, "host");
+                  }
+                }}
               >
                 Host
               </button>
               <button
                 className={`btn ${roleChoice === "player" ? "btn-primary" : ""}`}
-                onClick={() => setRoleChoice("player")}
+                onClick={() => {
+                  setRoleChoice("player");
+                  if (typeof window !== "undefined") {
+                    window.localStorage.setItem(STORAGE_KEYS.role, "player");
+                  }
+                }}
               >
                 Player
               </button>
@@ -302,7 +341,13 @@ export default function App() {
                   Name
                   <input
                     value={playerName}
-                    onChange={(event) => setPlayerName(event.target.value)}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setPlayerName(value);
+                      if (typeof window !== "undefined") {
+                        window.localStorage.setItem(STORAGE_KEYS.name, value);
+                      }
+                    }}
                     placeholder="Enter name"
                   />
                 </label>
@@ -324,7 +369,13 @@ export default function App() {
                 )}
                 <button
                   className="btn btn-primary"
-                  onClick={connect}
+                  onClick={() => {
+                    if (typeof window !== "undefined") {
+                      window.localStorage.setItem(STORAGE_KEYS.role, roleChoice);
+                      window.localStorage.setItem(STORAGE_KEYS.name, playerName);
+                    }
+                    connect();
+                  }}
                   disabled={!playerName.trim() || (roleChoice === "host" && !hostKey)}
                 >
                   Connect
@@ -379,7 +430,7 @@ export default function App() {
         </div>
       </header>
 
-      {!isHost && roomState && !roomState.hostId && (
+      {hostWaiting && (
         <div className="host-wait">
           <div className="host-wait-card">
             <h2>Waiting for the host</h2>
@@ -664,7 +715,7 @@ export default function App() {
         </aside>
       </main>
 
-      <section className="action-panel">
+      <section className={`action-panel ${compactControls ? "compact" : ""}`}>
         <div className="action-info">
           <div className="turn-indicator">
             {connectionStatus !== "connected"

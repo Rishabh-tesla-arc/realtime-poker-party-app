@@ -623,6 +623,10 @@ wss.on("connection", (ws) => {
     if (message.type === "JOIN") {
       const { name, roomId, hostKey } = message.payload || {};
       const room = getRoom(roomId || "lobby");
+      if (!room.hostId && (!hostKey || hostKey !== HOST_PASSWORD)) {
+        send(ws, { type: "INFO", payload: { text: "Host not online." } });
+        return;
+      }
       if (room.players.length >= room.maxPlayers) {
         send(ws, { type: "INFO", payload: { text: "Table is full." } });
         return;

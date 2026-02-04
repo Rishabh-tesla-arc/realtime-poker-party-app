@@ -531,6 +531,14 @@ input {
   flex-wrap: wrap;
 }
 
+.action-panel.compact {
+  opacity: 0.35;
+}
+
+.action-panel.compact .compact-toggle {
+  opacity: 1;
+}
+
 .compact-toggle {
   min-width: 140px;
 }
@@ -873,11 +881,16 @@ input {
   .table-layout {
     grid-template-columns: 1fr;
     padding: 8px;
+    height: 100vh;
   }
 
   .table {
     width: 100%;
-    max-width: 900px;
-    max-height: 60vh;
+    max-width: 100%;
+    max-height: 55vh;
+  }
+
+  .table-wrap {
+    height: 60vh;
   }
 }
