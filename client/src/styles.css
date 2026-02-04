@@ -23,13 +23,14 @@ input {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .topbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 18px 28px;
+  padding: calc(12px + env(safe-area-inset-top, 0px)) 28px 12px;
   background: rgba(10, 12, 16, 0.8);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(12px);
@@ -212,8 +213,9 @@ input {
 
 .table {
   position: relative;
-  width: min(1000px, 95vw);
-  aspect-ratio: 16 / 9;
+  width: min(900px, 92vw);
+  aspect-ratio: 2 / 1;
+  max-width: 900px;
   border-radius: 200px;
   background: radial-gradient(circle at center, #1b7a52 0%, #0f5137 40%, #0b3524 100%);
   border: 10px solid #46361e;
@@ -249,8 +251,8 @@ input {
 }
 
 .card {
-  width: 50px;
-  height: 70px;
+  width: clamp(20px, 4.5vh, 46px);
+  height: clamp(28px, 6.2vh, 66px);
   border-radius: 10px;
   background: #f6f2eb;
   color: #151515;
@@ -493,6 +495,7 @@ input {
   align-items: center;
   gap: 20px;
   flex-wrap: wrap;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
 }
 
 .action-info {
@@ -798,18 +801,19 @@ input {
 
   .table {
     border-radius: 120px;
-    width: 100%;
-    max-width: 100%;
-    height: 60vh;
+    width: min(92vw, 680px);
+    max-width: 92vw;
+    height: 54vh;
+    aspect-ratio: 2 / 1;
   }
 
   .seat {
-    width: 110px;
+    width: 90px;
   }
 
   .card {
-    width: 30px;
-    height: 42px;
+    width: clamp(18px, 3.6vh, 28px);
+    height: clamp(24px, 4.8vh, 40px);
   }
 
   .action-panel {
@@ -881,29 +885,71 @@ input {
     grid-template-columns: 1fr;
     padding: 8px;
     height: 100vh;
+    overflow: hidden;
   }
 
   .table {
-    width: 100%;
-    max-width: 100%;
-    height: 72vh;
-    aspect-ratio: 16 / 9;
+    width: min(90vw, 860px);
+    max-width: 90vw;
+    height: 62vh;
+    aspect-ratio: 2 / 1;
   }
 
   .table-wrap {
-    height: 72vh;
+    height: 62vh;
   }
 
   .seat {
-    width: 100px;
+    width: 80px;
   }
 
   .card {
-    width: 26px;
-    height: 38px;
+    width: clamp(16px, 3vh, 24px);
+    height: clamp(22px, 4vh, 34px);
   }
 
   .player-cards {
-    min-height: 44px;
+    min-height: 30px;
+  }
+
+  .topbar {
+    padding: calc(6px + env(safe-area-inset-top, 0px)) 16px 6px;
+  }
+
+  .brand-title {
+    font-size: 18px;
+  }
+
+  .brand-subtitle {
+    font-size: 10px;
+  }
+
+  .footer {
+    padding: 6px;
+    font-size: 10px;
+  }
+
+  .action-panel {
+    position: fixed;
+    right: calc(8px + env(safe-area-inset-right, 0px));
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    width: min(44vw, 360px);
+    border-radius: 16px;
+    padding: 10px 12px;
+    z-index: 30;
+    background: rgba(10, 12, 16, 0.75);
+    backdrop-filter: blur(10px);
+  }
+
+  .action-info {
+    display: none;
+  }
+
+  .actions {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .raise-group {
+    grid-column: span 2;
   }
 }

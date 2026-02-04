@@ -266,7 +266,8 @@ export default function App() {
     roomState?.handActive &&
     currentPlayer?.id === hero?.id &&
     !hero?.folded &&
-    !profileRequired;
+    !profileRequired &&
+    !roomState?.roundComplete;
 
   const raiseMax = hero ? hero.stack + hero.bet : 0;
   const minRaiseTo =
@@ -772,6 +773,15 @@ export default function App() {
               />
               <span>Keep balances</span>
             </label>
+          )}
+          {isHost && roomState?.handActive && roomState?.roundComplete && (
+            <button
+              className="btn btn-primary"
+              onClick={() => sendAction("ADVANCE_ROUND")}
+              disabled={!canControlGame}
+            >
+              Continue Round
+            </button>
           )}
           <div className={`control-group ${compactControls ? "compact" : ""}`}>
             <button

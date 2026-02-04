@@ -79,6 +79,8 @@ function getRoom(roomId) {
       advanceTimer: null,
       initialStack: 1000,
       carryOverBalances: true,
+      roundActions: [],
+      roundComplete: false,
     });
   }
   return rooms.get(roomId);
@@ -125,6 +127,7 @@ function buildStateForPlayer(room, playerId) {
     maxPlayers: room.maxPlayers,
     initialStack: room.initialStack,
     carryOverBalances: room.carryOverBalances,
+    roundComplete: room.roundComplete,
     dealerIndex: room.dealerIndex,
     currentPlayerIndex: room.currentPlayerIndex,
     currentBet: room.currentBet,
@@ -157,6 +160,8 @@ function resetHandState(room) {
   room.stage = "preflop";
   room.handActive = true;
   room.revealHands = false;
+  room.roundActions = [];
+  room.roundComplete = false;
   room.players.forEach((player) => {
     player.bet = 0;
     player.totalBet = 0;
@@ -263,6 +268,7 @@ function checkForHandEnd(room) {
     room.pot = 0;
     room.handActive = false;
     room.revealHands = true;
+    room.roundComplete = false;
     maybeAutoStart(room);
     return true;
   }
@@ -353,6 +359,7 @@ function resolveSidePots(room, contenders) {
 
   room.pot = 0;
   room.handActive = false;
+  room.roundComplete = false;
   maybeAutoStart(room);
 }
 
@@ -396,6 +403,8 @@ function advanceStage(room) {
   }
 
   clearBets(room);
+  room.roundActions = [];
+  room.roundComplete = false;
   const dealer = room.dealerIndex % room.players.length;
   room.currentPlayerIndex = nextActivePlayer(room, dealer);
   if (room.currentPlayerIndex === -1) {
@@ -433,9 +442,12 @@ function handleAction(room, player, action, raiseTo = 0) {
     player.status = "Raise";
   }
 
+  if (!room.roundActions.includes(player.id)) {
+    room.roundActions.push(player.id);
+  }
   if (checkForHandEnd(room)) return;
-  if (isBettingRoundComplete(room)) {
-    scheduleAdvance(room);
+  if (isRoundCompleteSimple(room)) {
+    room.roundComplete = true;
     return;
   }
 
@@ -445,6 +457,14 @@ function handleAction(room, player, action, raiseTo = 0) {
     return;
   }
   room.currentPlayerIndex = nextIndex;
+}
+
+function isRoundCompleteSimple(room) {
+  const active = room.players.filter((p) => !p.folded && p.stack + p.bet > 0);
+  if (active.length <= 1) return true;
+  return active.every(
+    (player) => player.allIn || room.roundActions.includes(player.id)
+  );
 }
 
 function combinations(cards, size) {
@@ -764,6 +784,18 @@ wss.on("connection", (ws) => {
         room.initialStack = Math.min(Math.max(Math.floor(requested), 100), 10000);
         syncRoom(room);
       }
+    }
+
+    if (message.type === "ADVANCE_ROUND") {
+      if (room.hostId !== player.id) {
+        send(ws, { type: "INFO", payload: { text: "Only the host can advance." } });
+        return;
+      }
+      if (!room.roundComplete) {
+        return;
+      }
+      advanceStage(room);
+      syncRoom(room);
     }
   });
 
