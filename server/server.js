@@ -565,8 +565,10 @@ function startHand(room) {
   }
   resetHandState(room);
   room.dealerIndex = (room.dealerIndex + 1) % room.players.length;
-  postBlinds(room);
   dealHoleCards(room);
+  const starters = active.map((player) => room.players.indexOf(player));
+  room.currentPlayerIndex =
+    starters[Math.floor(Math.random() * starters.length)] ?? 0;
 }
 
 function newGame(room) {

@@ -731,4 +731,27 @@ input {
     width: 46px;
     height: 64px;
   }
+
+  .action-panel {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .actions {
+    justify-content: center;
+  }
+
+  .raise-group {
+    width: 100%;
+  }
+}
+
+@media (max-width: 900px) and (orientation: landscape) {
+  .table-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .table {
+    width: min(95vw, 900px);
+  }
 }

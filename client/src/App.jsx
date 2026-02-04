@@ -54,7 +54,6 @@ export default function App() {
   const [roomState, setRoomState] = useState(null);
   const [raiseAmount, setRaiseAmount] = useState(20);
   const [infoMessage, setInfoMessage] = useState("");
-  const [showRules, setShowRules] = useState(false);
   const [localSpeed, setLocalSpeed] = useState(700);
   const [localMaxPlayers, setLocalMaxPlayers] = useState(() => {
     if (typeof window === "undefined") return 10;
@@ -281,44 +280,41 @@ export default function App() {
           <span className="brand-subtitle">Multiplayer Texas Hold'em</span>
         </div>
         <div className="controls">
-          <label className="control">
-            Server
-            <input
-              value={serverUrl}
-              onChange={(event) => setServerUrl(event.target.value)}
-            />
-          </label>
-          <label className="control">
-            Room
-            <input
-              value={roomId}
-              onChange={(event) => setRoomId(event.target.value)}
-            />
-          </label>
-          <label className="control">
-            Name
-            <input
-              value={playerName}
-              onChange={(event) => setPlayerName(event.target.value)}
-            />
-          </label>
-          <label className="control">
-            Host Key
-            <input
-              value={hostKey}
-              onChange={(event) => {
-                const value = event.target.value;
-                setHostKey(value);
-                if (typeof window !== "undefined") {
-                  window.localStorage.setItem(STORAGE_KEYS.hostKey, value);
-                }
-              }}
-              placeholder="Optional"
-            />
-          </label>
-          <button className="btn btn-primary" onClick={connect}>
-            {connectionStatus === "connected" ? "Reconnect" : "Connect"}
-          </button>
+          {(!roomState || isHost) && (
+            <>
+              <label className="control">
+                Room
+                <input
+                  value={roomId}
+                  onChange={(event) => setRoomId(event.target.value)}
+                />
+              </label>
+              <label className="control">
+                Name
+                <input
+                  value={playerName}
+                  onChange={(event) => setPlayerName(event.target.value)}
+                />
+              </label>
+              <label className="control">
+                Host Key
+                <input
+                  value={hostKey}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setHostKey(value);
+                    if (typeof window !== "undefined") {
+                      window.localStorage.setItem(STORAGE_KEYS.hostKey, value);
+                    }
+                  }}
+                  placeholder="Optional"
+                />
+              </label>
+              <button className="btn btn-primary" onClick={connect}>
+                {connectionStatus === "connected" ? "Reconnect" : "Connect"}
+              </button>
+            </>
+          )}
           <div className={`status-chip status-${connectionStatus}`}>
             <span className="status-dot" />
             {connectionStatus}
@@ -461,137 +457,139 @@ export default function App() {
         <aside className="side-panel">
           {isHost ? (
             !roomState?.handActive && (
-              <div className="panel-card">
-                <div className="panel-title">Table Info</div>
-                <div className="panel-row">
-                  <span>Room</span>
-                  <span>{roomId}</span>
-                </div>
-                <div className="panel-row">
-                  <span>Players</span>
-                  <span>{roomState?.players.length || 0}/{maxPlayers}</span>
-                </div>
-                <div className="panel-row">
-                  <span>Blinds</span>
-                  <span>$5 / $10</span>
-                </div>
-                <div className="panel-row">
-                  <span>Buy-in</span>
-                  <span>${initialStack}</span>
-                </div>
-                <div className="panel-row">
-                  <span>Game Speed</span>
-                  <span>{localSpeed} ms</span>
-                </div>
-                <div className="panel-row">
-                  <span>Seats</span>
-                  <span>{maxPlayers}</span>
-                </div>
-                <div className="speed-control">
-                  <input
-                    type="range"
-                    min="2"
-                    max="10"
-                    step="1"
-                    value={localMaxPlayers}
-                    onChange={(event) => {
-                      const value = Number(event.target.value);
-                      manualMaxPlayersRef.current = true;
-                      setLocalMaxPlayers(value);
-                      if (typeof window !== "undefined") {
-                        window.localStorage.setItem(
-                          STORAGE_KEYS.maxPlayers,
-                          String(value)
-                        );
+              <>
+                <div className="panel-card">
+                  <div className="panel-title">Table Info</div>
+                  <div className="panel-row">
+                    <span>Room</span>
+                    <span>{roomId}</span>
+                  </div>
+                  <div className="panel-row">
+                    <span>Players</span>
+                    <span>{roomState?.players.length || 0}/{maxPlayers}</span>
+                  </div>
+                  <div className="panel-row">
+                    <span>Blinds</span>
+                    <span>$5 / $10</span>
+                  </div>
+                  <div className="panel-row">
+                    <span>Buy-in</span>
+                    <span>${initialStack}</span>
+                  </div>
+                  <div className="panel-row">
+                    <span>Game Speed</span>
+                    <span>{localSpeed} ms</span>
+                  </div>
+                  <div className="panel-row">
+                    <span>Seats</span>
+                    <span>{maxPlayers}</span>
+                  </div>
+                  <div className="speed-control">
+                    <input
+                      type="range"
+                      min="2"
+                      max="10"
+                      step="1"
+                      value={localMaxPlayers}
+                      onChange={(event) => {
+                        const value = Number(event.target.value);
+                        manualMaxPlayersRef.current = true;
+                        setLocalMaxPlayers(value);
+                        if (typeof window !== "undefined") {
+                          window.localStorage.setItem(
+                            STORAGE_KEYS.maxPlayers,
+                            String(value)
+                          );
+                        }
+                        if (isHost) {
+                          sendAction("SET_MAX_PLAYERS", { maxPlayers: value });
+                        }
+                      }}
+                      disabled={!canControlGame}
+                    />
+                    <span className="speed-hint">
+                      {isHost ? "Host controls seats" : "Host controls seats"}
+                    </span>
+                  </div>
+                  <div className="name-editor">
+                    <input
+                      type="number"
+                      min="100"
+                      max="10000"
+                      step="100"
+                      value={localInitialStack}
+                      onChange={(event) =>
+                        setLocalInitialStack(Number(event.target.value))
                       }
-                      if (isHost) {
-                        sendAction("SET_MAX_PLAYERS", { maxPlayers: value });
+                      placeholder="Buy-in"
+                    />
+                    <button
+                      className="btn btn-ghost"
+                      onClick={() =>
+                        sendAction("SET_INITIAL_STACK", { initialStack: localInitialStack })
                       }
-                    }}
-                    disabled={!canControlGame}
+                      disabled={!canControlGame}
+                    >
+                      Set Buy-in
+                    </button>
+                  </div>
+                  <div className="speed-control">
+                    <input
+                      type="range"
+                      min="300"
+                      max="2000"
+                      step="100"
+                      value={localSpeed}
+                      onChange={(event) => {
+                        const value = Number(event.target.value);
+                        setLocalSpeed(value);
+                        if (isHost) {
+                          sendAction("SET_SPEED", { speedMs: value });
+                        }
+                      }}
+                      disabled={!canControlGame}
+                    />
+                    <span className="speed-hint">
+                      {isHost ? "Host controls speed" : "Host controls speed"}
+                    </span>
+                  </div>
+                  <div className="panel-row">
+                    <span>Your Name</span>
+                    <span>{hero?.name || playerName}</span>
+                  </div>
+                  <div className="name-editor">
+                    <input
+                      value={playerName}
+                      onChange={(event) => setPlayerName(event.target.value)}
+                      placeholder="Enter name"
+                    />
+                    <button
+                      className="btn btn-ghost"
+                      onClick={() => sendAction("SET_NAME", { name: playerName })}
+                      disabled={!hero || profileRequired}
+                    >
+                      Update
+                    </button>
+                  </div>
+                </div>
+                <div className="panel-card">
+                  <div className="panel-title">Hand Rankings</div>
+                  <img
+                    src="/images.png"
+                    alt="Poker hand rankings reference"
+                    className="rules-image"
                   />
-                  <span className="speed-hint">
-                    {isHost ? "Host controls seats" : "Host controls seats"}
-                  </span>
                 </div>
-                <div className="name-editor">
-                  <input
-                    type="number"
-                    min="100"
-                    max="10000"
-                    step="100"
-                    value={localInitialStack}
-                    onChange={(event) =>
-                      setLocalInitialStack(Number(event.target.value))
-                    }
-                    placeholder="Buy-in"
-                  />
-                  <button
-                    className="btn btn-ghost"
-                    onClick={() =>
-                      sendAction("SET_INITIAL_STACK", { initialStack: localInitialStack })
-                    }
-                    disabled={!canControlGame}
-                  >
-                    Set Buy-in
-                  </button>
-                </div>
-                <div className="speed-control">
-                  <input
-                    type="range"
-                    min="300"
-                    max="2000"
-                    step="100"
-                    value={localSpeed}
-                    onChange={(event) => {
-                      const value = Number(event.target.value);
-                      setLocalSpeed(value);
-                      if (isHost) {
-                        sendAction("SET_SPEED", { speedMs: value });
-                      }
-                    }}
-                    disabled={!canControlGame}
-                  />
-                  <span className="speed-hint">
-                    {isHost ? "Host controls speed" : "Host controls speed"}
-                  </span>
-                </div>
-                <div className="panel-row">
-                  <span>Your Name</span>
-                  <span>{hero?.name || playerName}</span>
-                </div>
-                <div className="name-editor">
-                  <input
-                    value={playerName}
-                    onChange={(event) => setPlayerName(event.target.value)}
-                    placeholder="Enter name"
-                  />
-                  <button
-                    className="btn btn-ghost"
-                    onClick={() => sendAction("SET_NAME", { name: playerName })}
-                    disabled={!hero || profileRequired}
-                  >
-                    Update
-                  </button>
-                </div>
-              </div>
+              </>
             )
           ) : (
             <div className="panel-card">
               <div className="panel-title">Hand Rankings</div>
-              <button
-                className="btn btn-ghost"
-                onClick={() => setShowRules((prev) => !prev)}
-              >
-                {showRules ? "Hide Guide" : "Show Guide"}
-              </button>
-              {showRules && (
-                <img
-                  src="/images.png"
-                  alt="Poker hand rankings reference"
-                  className="rules-image"
-                />
-              )}
+              <img
+                src="/images.png"
+                alt="Poker hand rankings reference"
+                className="rules-image"
+              />
             </div>
           )}
         </aside>
@@ -619,18 +617,17 @@ export default function App() {
           </div>
         </div>
         <div className="actions">
-          <button className="btn" onClick={() => setShowRules(true)}>
-            Rules
-          </button>
-          <label className="toggle">
-            <input
-              type="checkbox"
-              checked={carryOverBalances}
-              onChange={(event) => setCarryOverBalances(event.target.checked)}
-              disabled={!canControlGame}
-            />
-            <span>Keep balances</span>
-          </label>
+          {isHost && (
+            <label className="toggle">
+              <input
+                type="checkbox"
+                checked={carryOverBalances}
+                onChange={(event) => setCarryOverBalances(event.target.checked)}
+                disabled={!canControlGame}
+              />
+              <span>Keep balances</span>
+            </label>
+          )}
           <button
             className="btn btn-danger"
             disabled={!canAct}
@@ -676,40 +673,28 @@ export default function App() {
             </button>
             <span className="raise-value">to ${raiseAmount}</span>
           </div>
-          <button
-            className="btn"
-            onClick={() => sendAction("START_HAND")}
-            disabled={!canControlGame}
-          >
-            Next Hand
-          </button>
-          <button
-            className="btn"
-            onClick={() => sendAction("NEW_GAME", { carryOver: carryOverBalances })}
-            disabled={!canControlGame}
-          >
-            New Game
-          </button>
+          {isHost && (
+            <>
+              <button
+                className="btn"
+                onClick={() => sendAction("START_HAND")}
+                disabled={!canControlGame}
+              >
+                Next Hand
+              </button>
+              <button
+                className="btn"
+                onClick={() => sendAction("NEW_GAME", { carryOver: carryOverBalances })}
+                disabled={!canControlGame}
+              >
+                New Game
+              </button>
+            </>
+          )}
         </div>
       </section>
 
-      {!isHost && showRules && (
-        <div className="rules-modal" onClick={() => setShowRules(false)}>
-          <div className="rules-modal-card" onClick={(event) => event.stopPropagation()}>
-            <div className="rules-modal-header">
-              <span>Hand Rankings</span>
-              <button className="btn btn-ghost" onClick={() => setShowRules(false)}>
-                Close
-              </button>
-            </div>
-            <img
-              src="/images.png"
-              alt="Poker hand rankings reference"
-              className="rules-image"
-            />
-          </div>
-        </div>
-      )}
+      
 
       {showProfileModal && (
         <div className="rules-modal">
