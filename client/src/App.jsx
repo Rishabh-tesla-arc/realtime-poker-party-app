@@ -39,7 +39,7 @@ const colorOptions = [
 
 export default function App() {
   const [serverUrl, setServerUrl] = useState(DEFAULT_SERVER);
-  const [roomId, setRoomId] = useState("lobby");
+  const [roomId] = useState("lobby");
   const [playerName, setPlayerName] = useState(() => {
     if (typeof window === "undefined") return "Player";
     return window.localStorage.getItem(STORAGE_KEYS.name) || "Player";
@@ -62,6 +62,7 @@ export default function App() {
   });
   const [localInitialStack, setLocalInitialStack] = useState(1000);
   const [carryOverBalances, setCarryOverBalances] = useState(true);
+  const [showHandRankings, setShowHandRankings] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileName, setProfileName] = useState("");
   const [profileColor, setProfileColor] = useState("");
@@ -283,13 +284,6 @@ export default function App() {
           {(!roomState || isHost) && (
             <>
               <label className="control">
-                Room
-                <input
-                  value={roomId}
-                  onChange={(event) => setRoomId(event.target.value)}
-                />
-              </label>
-              <label className="control">
                 Name
                 <input
                   value={playerName}
@@ -321,6 +315,15 @@ export default function App() {
           </div>
         </div>
       </header>
+
+      {!isHost && roomState && !roomState.hostId && (
+        <div className="host-wait">
+          <div className="host-wait-card">
+            <h2>Waiting for the host</h2>
+            <p>The table will open once the host joins with the host key.</p>
+          </div>
+        </div>
+      )}
 
       <main className="table-layout">
         <section className="table-wrap">
@@ -574,22 +577,24 @@ export default function App() {
                 </div>
                 <div className="panel-card">
                   <div className="panel-title">Hand Rankings</div>
-                  <img
-                    src="/images.png"
-                    alt="Poker hand rankings reference"
-                    className="rules-image"
-                  />
+                  <button
+                    className="btn btn-ghost"
+                    onClick={() => setShowHandRankings(true)}
+                  >
+                    View
+                  </button>
                 </div>
               </>
             )
           ) : (
             <div className="panel-card">
               <div className="panel-title">Hand Rankings</div>
-              <img
-                src="/images.png"
-                alt="Poker hand rankings reference"
-                className="rules-image"
-              />
+              <button
+                className="btn btn-ghost"
+                onClick={() => setShowHandRankings(true)}
+              >
+                View
+              </button>
             </div>
           )}
         </aside>
@@ -673,15 +678,8 @@ export default function App() {
             </button>
             <span className="raise-value">to ${raiseAmount}</span>
           </div>
-          {isHost && (
+          {isHost && !roomState?.handActive && (
             <>
-              <button
-                className="btn"
-                onClick={() => sendAction("START_HAND")}
-                disabled={!canControlGame}
-              >
-                Next Hand
-              </button>
               <button
                 className="btn"
                 onClick={() => sendAction("NEW_GAME", { carryOver: carryOverBalances })}
@@ -735,6 +733,24 @@ export default function App() {
                 Save & Continue
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showHandRankings && (
+        <div className="rules-modal" onClick={() => setShowHandRankings(false)}>
+          <div className="rules-modal-card" onClick={(event) => event.stopPropagation()}>
+            <div className="rules-modal-header">
+              <span>Hand Rankings</span>
+              <button className="btn btn-ghost" onClick={() => setShowHandRankings(false)}>
+                Close
+              </button>
+            </div>
+            <img
+              src="/images.png"
+              alt="Poker hand rankings reference"
+              className="rules-image"
+            />
           </div>
         </div>
       )}

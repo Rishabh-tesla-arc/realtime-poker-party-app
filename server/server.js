@@ -263,6 +263,7 @@ function checkForHandEnd(room) {
     room.pot = 0;
     room.handActive = false;
     room.revealHands = true;
+    maybeAutoStart(room);
     return true;
   }
   return false;
@@ -307,6 +308,7 @@ function resolveSidePots(room, contenders) {
   const pots = calculateSidePots(room);
   if (pots.length === 0) {
     room.handActive = false;
+    maybeAutoStart(room);
     return;
   }
 
@@ -351,6 +353,7 @@ function resolveSidePots(room, contenders) {
 
   room.pot = 0;
   room.handActive = false;
+  maybeAutoStart(room);
 }
 
 function scheduleAdvance(room) {
@@ -360,6 +363,19 @@ function scheduleAdvance(room) {
     room.advanceTimer = null;
     if (!room.handActive) return;
     advanceStage(room);
+    syncRoom(room);
+  }, room.speedMs);
+}
+
+function maybeAutoStart(room) {
+  if (room.handActive) return;
+  if (!room.hostId) return;
+  if (room.players.length < 2) return;
+  if (room.players.length !== room.maxPlayers) return;
+  setTimeout(() => {
+    if (room.handActive) return;
+    if (room.players.length !== room.maxPlayers) return;
+    startHand(room);
     syncRoom(room);
   }, room.speedMs);
 }
@@ -587,6 +603,7 @@ function newGame(room) {
   room.stage = "idle";
   room.handActive = false;
   room.revealHands = false;
+  maybeAutoStart(room);
 }
 
 wss.on("connection", (ws) => {
@@ -641,6 +658,7 @@ wss.on("connection", (ws) => {
         payload: { text: `${player.name} joined the table.` },
       });
       syncRoom(room);
+      maybeAutoStart(room);
       return;
     }
 
