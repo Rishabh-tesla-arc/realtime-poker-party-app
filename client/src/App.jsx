@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-const DEFAULT_SERVER = "ws://localhost:5174";
+const DEFAULT_SERVER = "wss://poker-server-cenl.onrender.com";
 
 const STAGE_LABELS = {
   idle: "Waiting",
@@ -22,6 +22,7 @@ const STORAGE_KEYS = {
   name: "poker.profile.name",
   color: "poker.profile.color",
   hostKey: "poker.host.key",
+  maxPlayers: "poker.maxPlayers",
 };
 const colorOptions = [
   "#f4c35a",
@@ -55,7 +56,11 @@ export default function App() {
   const [infoMessage, setInfoMessage] = useState("");
   const [showRules, setShowRules] = useState(false);
   const [localSpeed, setLocalSpeed] = useState(700);
-  const [localMaxPlayers, setLocalMaxPlayers] = useState(10);
+  const [localMaxPlayers, setLocalMaxPlayers] = useState(() => {
+    if (typeof window === "undefined") return 10;
+    const stored = Number(window.localStorage.getItem(STORAGE_KEYS.maxPlayers));
+    return Number.isFinite(stored) && stored >= 2 ? stored : 10;
+  });
   const [localInitialStack, setLocalInitialStack] = useState(1000);
   const [carryOverBalances, setCarryOverBalances] = useState(true);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -64,6 +69,7 @@ export default function App() {
   const [effects, setEffects] = useState([]);
   const reconnectTimer = useRef(null);
   const prevStateRef = useRef(null);
+  const manualMaxPlayersRef = useRef(false);
 
   const hero = useMemo(() => {
     if (!roomState || !clientId) return null;
@@ -115,7 +121,7 @@ export default function App() {
         if (message.payload.speedMs) {
           setLocalSpeed(message.payload.speedMs);
         }
-        if (message.payload.maxPlayers) {
+        if (message.payload.maxPlayers && !manualMaxPlayersRef.current) {
           setLocalMaxPlayers(message.payload.maxPlayers);
         }
         if (message.payload.initialStack) {
@@ -236,6 +242,13 @@ export default function App() {
   const maxPlayers = roomState?.maxPlayers ?? localMaxPlayers;
   const initialStack = roomState?.initialStack ?? localInitialStack;
 
+  useEffect(() => {
+    if (!roomState || !isHost || !manualMaxPlayersRef.current) return;
+    if (roomState.maxPlayers !== localMaxPlayers) {
+      sendAction("SET_MAX_PLAYERS", { maxPlayers: localMaxPlayers });
+    }
+  }, [roomState, isHost, localMaxPlayers]);
+
   const seats = useMemo(() => {
     const seatCount = Math.min(maxPlayers, MAX_SEATS);
     const filled = Array.from({ length: seatCount }, () => null);
@@ -314,9 +327,140 @@ export default function App() {
       </header>
 
       <main className="table-layout">
-        {isHost ? (
-          <aside className="side-panel">
-            {!roomState?.handActive && (
+        <section className="table-wrap">
+          <div className="table">
+            <div className="table-sheen" />
+            <div className="board">
+              <div className="pot">
+                <span className="label">Pot</span>
+                <span className="value">${roomState?.pot ?? 0}</span>
+                {(roomState?.sidePots || []).map((pot, index) => (
+                  <span key={index} className="side-pot">
+                    Side pot {index + 1}: ${pot.amount}
+                  </span>
+                ))}
+              </div>
+              <div className="community-cards">
+                {(roomState?.community || []).map((card) => (
+                  <div
+                    key={`${card.suit}-${card.rank}`}
+                    className={`card ${
+                      card.suit === "hearts" || card.suit === "diamonds" ? "red" : ""
+                    }`}
+                    data-rank={card.label}
+                  >
+                    <span className="suit">{SUIT_MAP[card.suit]}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="betting-banner">
+                {roomState ? STAGE_LABELS[roomState.stage] : "Waiting"}
+              </div>
+            </div>
+
+            <div className="seats">
+              {seats.map((player, index) => {
+                if (!player) {
+                  return (
+                    <div
+                      key={index}
+                      className={`seat seat-${index}`}
+                      style={seatPositions[index]}
+                    >
+                      <div className="player empty">
+                        <div className="avatar muted" />
+                        <div className="player-info">
+                          <span className="player-name">Empty Seat</span>
+                          <span className="player-stack">--</span>
+                        </div>
+                        <div className="player-status">Waiting...</div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                const reveal =
+                  player.id === hero?.id ||
+                  roomState?.revealHands ||
+                  !roomState?.handActive;
+                const showBacks = !reveal && !player.folded;
+                const isDealer = roomState?.dealerIndex === player.seatIndex;
+                const isBetting =
+                  roomState?.handActive && currentPlayer?.id === player.id;
+                const seatEffects = effects.filter(
+                  (item) => item.seatIndex === player.seatIndex
+                );
+
+                return (
+                  <div
+                    key={player.id}
+                    className={`seat seat-${index}`}
+                    style={seatPositions[index]}
+                  >
+                    <div
+                      className={`player ${
+                        roomState?.handActive && currentPlayer?.id === player.id
+                          ? "active"
+                          : ""
+                      }`}
+                    >
+                      <div className="avatar" style={{ background: player.avatar }} />
+                      <div className="player-info">
+                        <span className={`player-name ${isBetting ? "betting" : ""}`}>
+                          {player.name}
+                          {isBetting && <span className="betting-dot" />}
+                        </span>
+                        <span className="player-stack">${player.stack}</span>
+                      </div>
+                      <div className="player-tags">
+                        {player.id === hero?.id && (
+                          <span className="player-tag">You</span>
+                        )}
+                        {isDealer && <span className="player-tag gold">Dealer</span>}
+                        {player.allIn && <span className="player-tag red">All In</span>}
+                      </div>
+                      <div className="player-bet">
+                        {player.bet > 0 ? `Bet: $${player.bet}` : ""}
+                      </div>
+                      <div className="player-cards">
+                        {player.hand.map((card, idx) =>
+                          showBacks ? (
+                            <div key={idx} className="card back" />
+                          ) : (
+                            <div
+                              key={`${card.suit}-${card.rank}`}
+                              className={`card ${
+                                card.suit === "hearts" ||
+                                card.suit === "diamonds"
+                                  ? "red"
+                                  : ""
+                              }`}
+                              data-rank={card.label}
+                            >
+                              <span className="suit">{SUIT_MAP[card.suit]}</span>
+                            </div>
+                          )
+                        )}
+                      </div>
+                      <div className="player-status">{player.status}</div>
+                      {seatEffects.map((effect) => (
+                        <div key={effect.id} className={`float-amount ${effect.type}`}>
+                          {effect.type === "bet"
+                            ? `-$${effect.amount}`
+                            : `+$${effect.amount}`}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        <aside className="side-panel">
+          {isHost ? (
+            !roomState?.handActive && (
               <div className="panel-card">
                 <div className="panel-title">Table Info</div>
                 <div className="panel-row">
@@ -352,7 +496,14 @@ export default function App() {
                     value={localMaxPlayers}
                     onChange={(event) => {
                       const value = Number(event.target.value);
+                      manualMaxPlayersRef.current = true;
                       setLocalMaxPlayers(value);
+                      if (typeof window !== "undefined") {
+                        window.localStorage.setItem(
+                          STORAGE_KEYS.maxPlayers,
+                          String(value)
+                        );
+                      }
                       if (isHost) {
                         sendAction("SET_MAX_PLAYERS", { maxPlayers: value });
                       }
@@ -424,174 +575,28 @@ export default function App() {
                   </button>
                 </div>
               </div>
-            )}
-          </aside>
-        ) : (
-          <>
-            <section className="table-wrap">
-              <div className="table">
-                <div className="table-sheen" />
-                <div className="board">
-                  <div className="pot">
-                    <span className="label">Pot</span>
-                    <span className="value">${roomState?.pot ?? 0}</span>
-                    {(roomState?.sidePots || []).map((pot, index) => (
-                      <span key={index} className="side-pot">
-                        Side pot {index + 1}: ${pot.amount}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="community-cards">
-                    {(roomState?.community || []).map((card) => (
-                      <div
-                        key={`${card.suit}-${card.rank}`}
-                        className={`card ${
-                          card.suit === "hearts" || card.suit === "diamonds"
-                            ? "red"
-                            : ""
-                        }`}
-                        data-rank={card.label}
-                      >
-                        <span className="suit">{SUIT_MAP[card.suit]}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="betting-banner">
-                    {roomState ? STAGE_LABELS[roomState.stage] : "Waiting"}
-                  </div>
-                </div>
-
-                <div className="seats">
-                  {seats.map((player, index) => {
-                    if (!player) {
-                      return (
-                        <div
-                          key={index}
-                          className={`seat seat-${index}`}
-                          style={seatPositions[index]}
-                        >
-                          <div className="player empty">
-                            <div className="avatar muted" />
-                            <div className="player-info">
-                              <span className="player-name">Empty Seat</span>
-                              <span className="player-stack">--</span>
-                            </div>
-                            <div className="player-status">Waiting...</div>
-                          </div>
-                        </div>
-                      );
-                    }
-
-                    const reveal =
-                      player.id === hero?.id ||
-                      roomState?.revealHands ||
-                      !roomState?.handActive;
-                    const showBacks = !reveal && !player.folded;
-                    const isDealer = roomState?.dealerIndex === player.seatIndex;
-                    const isBetting =
-                      roomState?.handActive && currentPlayer?.id === player.id;
-                    const seatEffects = effects.filter(
-                      (item) => item.seatIndex === player.seatIndex
-                    );
-
-                    return (
-                      <div
-                        key={player.id}
-                        className={`seat seat-${index}`}
-                        style={seatPositions[index]}
-                      >
-                        <div
-                          className={`player ${
-                            roomState?.handActive &&
-                            currentPlayer?.id === player.id
-                              ? "active"
-                              : ""
-                          }`}
-                        >
-                          <div className="avatar" style={{ background: player.avatar }} />
-                          <div className="player-info">
-                            <span className={`player-name ${isBetting ? "betting" : ""}`}>
-                              {player.name}
-                              {isBetting && <span className="betting-dot" />}
-                            </span>
-                            <span className="player-stack">${player.stack}</span>
-                          </div>
-                          <div className="player-tags">
-                            {player.id === hero?.id && (
-                              <span className="player-tag">You</span>
-                            )}
-                            {isDealer && (
-                              <span className="player-tag gold">Dealer</span>
-                            )}
-                            {player.allIn && (
-                              <span className="player-tag red">All In</span>
-                            )}
-                          </div>
-                          <div className="player-bet">
-                            {player.bet > 0 ? `Bet: $${player.bet}` : ""}
-                          </div>
-                          <div className="player-cards">
-                            {player.hand.map((card, idx) =>
-                              showBacks ? (
-                                <div key={idx} className="card back" />
-                              ) : (
-                                <div
-                                  key={`${card.suit}-${card.rank}`}
-                                  className={`card ${
-                                    card.suit === "hearts" ||
-                                    card.suit === "diamonds"
-                                      ? "red"
-                                      : ""
-                                  }`}
-                                  data-rank={card.label}
-                                >
-                                  <span className="suit">{SUIT_MAP[card.suit]}</span>
-                                </div>
-                              )
-                            )}
-                          </div>
-                          <div className="player-status">{player.status}</div>
-                          {seatEffects.map((effect) => (
-                            <div
-                              key={effect.id}
-                              className={`float-amount ${effect.type}`}
-                            >
-                              {effect.type === "bet"
-                                ? `-$${effect.amount}`
-                                : `+$${effect.amount}`}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </section>
-
-            <aside className="side-panel">
-              <div className="panel-card">
-                <div className="panel-title">Hand Rankings</div>
-                <button
-                  className="btn btn-ghost"
-                  onClick={() => setShowRules((prev) => !prev)}
-                >
-                  {showRules ? "Hide Guide" : "Show Guide"}
-                </button>
-                {showRules && (
-                  <img
-                    src="/images.png"
-                    alt="Poker hand rankings reference"
-                    className="rules-image"
-                  />
-                )}
-              </div>
-            </aside>
-          </>
-        )}
+            )
+          ) : (
+            <div className="panel-card">
+              <div className="panel-title">Hand Rankings</div>
+              <button
+                className="btn btn-ghost"
+                onClick={() => setShowRules((prev) => !prev)}
+              >
+                {showRules ? "Hide Guide" : "Show Guide"}
+              </button>
+              {showRules && (
+                <img
+                  src="/images.png"
+                  alt="Poker hand rankings reference"
+                  className="rules-image"
+                />
+              )}
+            </div>
+          )}
+        </aside>
       </main>
 
-      {!isHost && (
       <section className="action-panel">
         <div className="action-info">
           <div className="turn-indicator">
@@ -687,7 +692,6 @@ export default function App() {
           </button>
         </div>
       </section>
-      )}
 
       {!isHost && showRules && (
         <div className="rules-modal" onClick={() => setShowRules(false)}>
