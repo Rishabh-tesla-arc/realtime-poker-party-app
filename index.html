@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Texas Hold'em Table</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-title">Royal Felt Poker</span>
+        <span class="brand-subtitle">Texas Hold'em</span>
+      </div>
+      <div class="controls">
+        <label class="control">
+          Players
+          <select id="playerCount">
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6" selected>6</option>
+          </select>
+        </label>
+        <button id="newGameBtn" class="btn btn-primary">New Game</button>
+        <button id="nextHandBtn" class="btn">Next Hand</button>
+      </div>
+    </header>
+
+    <main class="table-wrap">
+      <section class="table">
+        <div class="table-sheen"></div>
+        <div class="board">
+          <div class="pot">
+            <span class="label">Pot</span>
+            <span id="potValue" class="value">$0</span>
+          </div>
+          <div id="communityCards" class="community-cards"></div>
+          <div class="betting-banner" id="bettingBanner">
+            <span id="roundLabel">Pre-Flop</span>
+          </div>
+        </div>
+
+        <div id="seats" class="seats">
+          <div class="seat seat-0">
+            <div class="player">
+              <div class="avatar"></div>
+              <div class="player-info">
+                <span class="player-name">Player</span>
+                <span class="player-stack">$0</span>
+              </div>
+              <div class="player-bet"></div>
+              <div class="player-cards"></div>
+              <div class="player-status"></div>
+            </div>
+          </div>
+          <div class="seat seat-1">
+            <div class="player">
+              <div class="avatar"></div>
+              <div class="player-info">
+                <span class="player-name">Player</span>
+                <span class="player-stack">$0</span>
+              </div>
+              <div class="player-bet"></div>
+              <div class="player-cards"></div>
+              <div class="player-status"></div>
+            </div>
+          </div>
+          <div class="seat seat-2">
+            <div class="player">
+              <div class="avatar"></div>
+              <div class="player-info">
+                <span class="player-name">Player</span>
+                <span class="player-stack">$0</span>
+              </div>
+              <div class="player-bet"></div>
+              <div class="player-cards"></div>
+              <div class="player-status"></div>
+            </div>
+          </div>
+          <div class="seat seat-3">
+            <div class="player">
+              <div class="avatar"></div>
+              <div class="player-info">
+                <span class="player-name">Player</span>
+                <span class="player-stack">$0</span>
+              </div>
+              <div class="player-bet"></div>
+              <div class="player-cards"></div>
+              <div class="player-status"></div>
+            </div>
+          </div>
+          <div class="seat seat-4">
+            <div class="player">
+              <div class="avatar"></div>
+              <div class="player-info">
+                <span class="player-name">Player</span>
+                <span class="player-stack">$0</span>
+              </div>
+              <div class="player-bet"></div>
+              <div class="player-cards"></div>
+              <div class="player-status"></div>
+            </div>
+          </div>
+          <div class="seat seat-5">
+            <div class="player">
+              <div class="avatar"></div>
+              <div class="player-info">
+                <span class="player-name">Player</span>
+                <span class="player-stack">$0</span>
+              </div>
+              <div class="player-bet"></div>
+              <div class="player-cards"></div>
+              <div class="player-status"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <section class="action-panel">
+      <div class="action-info">
+        <div class="turn-indicator" id="turnIndicator">Waiting to start...</div>
+        <div class="chip-rail">
+          <span class="chip chip-red"></span>
+          <span class="chip chip-blue"></span>
+          <span class="chip chip-gold"></span>
+          <span class="chip chip-black"></span>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="foldBtn" class="btn btn-danger">Fold</button>
+        <button id="checkBtn" class="btn">Check</button>
+        <button id="callBtn" class="btn btn-primary">Call</button>
+        <div class="raise-group">
+          <input id="raiseAmount" type="range" min="10" max="200" step="5" value="20" />
+          <button id="raiseBtn" class="btn btn-accent">Raise</button>
+          <span id="raiseValue" class="raise-value">$20</span>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <span>Built for real-life Texas Hold'em rules with cinematic flair.</span>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>
