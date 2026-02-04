@@ -46,7 +46,7 @@ export default function App() {
   });
   const [hostKey, setHostKey] = useState(() => {
     if (typeof window === "undefined") return "";
-    return window.localStorage.getItem(STORAGE_KEYS.hostKey) || "";
+    return "";
   });
   const [socket, setSocket] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState("disconnected");
@@ -56,13 +56,15 @@ export default function App() {
   const [infoMessage, setInfoMessage] = useState("");
   const [localSpeed, setLocalSpeed] = useState(700);
   const [localMaxPlayers, setLocalMaxPlayers] = useState(() => {
-    if (typeof window === "undefined") return 10;
+    if (typeof window === "undefined") return 3;
     const stored = Number(window.localStorage.getItem(STORAGE_KEYS.maxPlayers));
-    return Number.isFinite(stored) && stored >= 2 ? stored : 10;
+    return Number.isFinite(stored) && stored >= 2 ? stored : 3;
   });
+  const [compactControls, setCompactControls] = useState(false);
   const [localInitialStack, setLocalInitialStack] = useState(1000);
   const [carryOverBalances, setCarryOverBalances] = useState(true);
   const [showHandRankings, setShowHandRankings] = useState(false);
+  const [roleChoice, setRoleChoice] = useState("");
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileName, setProfileName] = useState("");
   const [profileColor, setProfileColor] = useState("");
@@ -275,13 +277,74 @@ export default function App() {
 
   return (
     <div className="app">
+      {!roomState && (
+        <div className="role-screen">
+          <div className="role-card">
+            <div className="role-title">Royal Felt Poker</div>
+            <div className="role-subtitle">Choose your role to join</div>
+            <div className="role-toggle">
+              <button
+                className={`btn ${roleChoice === "host" ? "btn-primary" : ""}`}
+                onClick={() => setRoleChoice("host")}
+              >
+                Host
+              </button>
+              <button
+                className={`btn ${roleChoice === "player" ? "btn-primary" : ""}`}
+                onClick={() => setRoleChoice("player")}
+              >
+                Player
+              </button>
+            </div>
+            {roleChoice && (
+              <div className="role-form">
+                <label>
+                  Name
+                  <input
+                    value={playerName}
+                    onChange={(event) => setPlayerName(event.target.value)}
+                    placeholder="Enter name"
+                  />
+                </label>
+                {roleChoice === "host" && (
+                  <label>
+                    Host Key
+                    <input
+                      value={hostKey}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setHostKey(value);
+                        if (typeof window !== "undefined") {
+                          window.localStorage.setItem(STORAGE_KEYS.hostKey, value);
+                        }
+                      }}
+                      placeholder="Enter host key"
+                    />
+                  </label>
+                )}
+                <button
+                  className="btn btn-primary"
+                  onClick={connect}
+                  disabled={!playerName.trim() || (roleChoice === "host" && !hostKey)}
+                >
+                  Connect
+                </button>
+              </div>
+            )}
+            <div className="status-chip status-disconnected">
+              <span className="status-dot" />
+              {connectionStatus}
+            </div>
+          </div>
+        </div>
+      )}
       <header className="topbar">
         <div className="brand">
           <span className="brand-title">Royal Felt Poker</span>
           <span className="brand-subtitle">Multiplayer Texas Hold'em</span>
         </div>
         <div className="controls">
-          {(!roomState || isHost) && (
+          {(!roomState || isHost) && false && (
             <>
               <label className="control">
                 Name
@@ -321,6 +384,7 @@ export default function App() {
           <div className="host-wait-card">
             <h2>Waiting for the host</h2>
             <p>The table will open once the host joins with the host key.</p>
+            <p className="rotate-hint">Tip: Rotate to landscape for a better view.</p>
           </div>
         </div>
       )}
@@ -622,6 +686,12 @@ export default function App() {
           </div>
         </div>
         <div className="actions">
+          <button
+            className="btn btn-ghost compact-toggle"
+            onClick={() => setCompactControls((prev) => !prev)}
+          >
+            {compactControls ? "Expand Controls" : "Minimize Controls"}
+          </button>
           {isHost && (
             <label className="toggle">
               <input
@@ -633,50 +703,52 @@ export default function App() {
               <span>Keep balances</span>
             </label>
           )}
-          <button
-            className="btn btn-danger"
-            disabled={!canAct}
-            onClick={() => sendAction("PLAYER_ACTION", { action: "fold" })}
-          >
-            Fold
-          </button>
-          <button
-            className="btn"
-            disabled={!canAct || callAmount !== 0}
-            onClick={() => sendAction("PLAYER_ACTION", { action: "check" })}
-          >
-            Check
-          </button>
-          <button
-            className="btn btn-primary"
-            disabled={!canAct || callAmount === 0}
-            onClick={() => sendAction("PLAYER_ACTION", { action: "call" })}
-          >
-            Call {callAmount > 0 ? `$${callAmount}` : ""}
-          </button>
-          <div className="raise-group">
-            <input
-              type="range"
-              min={minRaiseTo}
-              max={Math.max(raiseMax, 20)}
-              step="5"
-              value={raiseAmount}
-              onChange={(event) => setRaiseAmount(Number(event.target.value))}
-              disabled={!canAct}
-            />
+          <div className={`control-group ${compactControls ? "compact" : ""}`}>
             <button
-              className="btn btn-accent"
+              className="btn btn-danger"
               disabled={!canAct}
-              onClick={() =>
-                sendAction("PLAYER_ACTION", {
-                  action: "raise",
-                  raiseTo: raiseAmount,
-                })
-              }
+              onClick={() => sendAction("PLAYER_ACTION", { action: "fold" })}
             >
-              Raise
+              Fold
             </button>
-            <span className="raise-value">to ${raiseAmount}</span>
+            <button
+              className="btn"
+              disabled={!canAct || callAmount !== 0}
+              onClick={() => sendAction("PLAYER_ACTION", { action: "check" })}
+            >
+              Check
+            </button>
+            <button
+              className="btn btn-primary"
+              disabled={!canAct || callAmount === 0}
+              onClick={() => sendAction("PLAYER_ACTION", { action: "call" })}
+            >
+              Call {callAmount > 0 ? `$${callAmount}` : ""}
+            </button>
+            <div className="raise-group">
+              <input
+                type="range"
+                min={minRaiseTo}
+                max={Math.max(raiseMax, 20)}
+                step="5"
+                value={raiseAmount}
+                onChange={(event) => setRaiseAmount(Number(event.target.value))}
+                disabled={!canAct}
+              />
+              <button
+                className="btn btn-accent"
+                disabled={!canAct}
+                onClick={() =>
+                  sendAction("PLAYER_ACTION", {
+                    action: "raise",
+                    raiseTo: raiseAmount,
+                  })
+                }
+              >
+                Raise
+              </button>
+              <span className="raise-value">to ${raiseAmount}</span>
+            </div>
           </div>
           {isHost && !roomState?.handActive && (
             <>
