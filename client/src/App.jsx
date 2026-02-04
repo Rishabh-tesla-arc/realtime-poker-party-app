@@ -244,6 +244,12 @@ export default function App() {
     setRoomState(null);
     setHostWaiting(false);
     autoConnectRef.current = false;
+    setRoleChoice("");
+    setShowProfileModal(false);
+    setShowHandRankings(false);
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(STORAGE_KEYS.role);
+    }
   };
 
   const sendAction = (type, payload = {}) => {
