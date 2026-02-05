@@ -535,6 +535,8 @@ export default function App() {
                       className={`player ${
                         roomState?.handActive && currentPlayer?.id === player.id
                           ? "active"
+                          : roomState?.handActive
+                          ? "inactive"
                           : ""
                       }`}
                     >

@@ -368,7 +368,7 @@ input {
   gap: 6px;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.35s ease, box-shadow 0.35s ease, opacity 0.35s ease;
 }
 
 .player.empty {
@@ -380,6 +380,26 @@ input {
   transform: scale(1.05);
   box-shadow: 0 20px 40px rgba(92, 224, 189, 0.3);
   border-color: rgba(92, 224, 189, 0.6);
+}
+
+.player.inactive {
+  transform: translateY(14px) scale(0.85);
+  opacity: 0.6;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+
+.player.inactive .player-bet,
+.player.inactive .player-cards,
+.player.inactive .player-status,
+.player.inactive .player-tags {
+  opacity: 0;
+  height: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+.player.inactive .player-info {
+  opacity: 0.7;
 }
 
 .avatar {
@@ -808,12 +828,12 @@ input {
   }
 
   .seat {
-    width: 90px;
+    width: 120px;
   }
 
   .card {
-    width: clamp(18px, 3.6vh, 28px);
-    height: clamp(24px, 4.8vh, 40px);
+    width: clamp(22px, 4.2vh, 36px);
+    height: clamp(30px, 5.6vh, 50px);
   }
 
   .action-panel {
@@ -900,16 +920,16 @@ input {
   }
 
   .seat {
-    width: 80px;
+    width: 110px;
   }
 
   .card {
-    width: clamp(16px, 3vh, 24px);
-    height: clamp(22px, 4vh, 34px);
+    width: clamp(20px, 3.8vh, 32px);
+    height: clamp(28px, 5vh, 44px);
   }
 
   .player-cards {
-    min-height: 30px;
+    min-height: 40px;
   }
 
   .topbar {
