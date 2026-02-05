@@ -74,6 +74,7 @@ export default function App() {
   const [profileName, setProfileName] = useState("");
   const [profileColor, setProfileColor] = useState("");
   const [effects, setEffects] = useState([]);
+  const [expandedPlayerId, setExpandedPlayerId] = useState(null);
   const reconnectTimer = useRef(null);
   const prevStateRef = useRef(null);
   const manualMaxPlayersRef = useRef(false);
@@ -208,6 +209,14 @@ export default function App() {
     }
     prevStateRef.current = roomState;
   }, [roomState]);
+
+  useEffect(() => {
+    if (roomState?.handActive) {
+      setExpandedPlayerId(currentPlayer?.id || null);
+      return;
+    }
+    setExpandedPlayerId(null);
+  }, [roomState?.handActive, currentPlayer?.id]);
 
   useEffect(() => {
     if (!hero) return;
@@ -545,7 +554,7 @@ export default function App() {
                           : roomState?.handActive
                           ? "inactive"
                           : ""
-                      }`}
+                      } ${expandedPlayerId === player.id ? "expanded" : "compact"}`}
                     >
                       <div className="avatar" style={{ background: player.avatar }} />
                       <div className="player-info">

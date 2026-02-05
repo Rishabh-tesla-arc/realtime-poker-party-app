@@ -376,6 +376,7 @@ input {
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.15);
   transition: transform 0.35s ease, box-shadow 0.35s ease, opacity 0.35s ease;
+  cursor: pointer;
 }
 
 .player.empty {
@@ -395,18 +396,23 @@ input {
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
 }
 
-.player.inactive .player-bet,
-.player.inactive .player-cards,
-.player.inactive .player-status,
-.player.inactive .player-tags {
+.player.compact .player-bet,
+.player.compact .player-cards,
+.player.compact .player-status,
+.player.compact .player-tags,
+.player.compact .player-pill.stack {
   opacity: 0;
   height: 0;
   margin: 0;
   overflow: hidden;
 }
 
-.player.inactive .player-info {
+.player.compact .player-info {
   opacity: 0.7;
+}
+
+.player.expanded {
+  opacity: 1;
 }
 
 .avatar {
