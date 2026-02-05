@@ -517,7 +517,7 @@ export default function App() {
                   player.id === hero?.id ||
                   roomState?.revealHands ||
                   !roomState?.handActive;
-                const showBacks = !reveal && !player.folded;
+                    const showBacks = !reveal && !player.folded;
                 const isDealer = roomState?.dealerIndex === player.seatIndex;
                 const isBetting =
                   roomState?.handActive && currentPlayer?.id === player.id;
@@ -557,24 +557,25 @@ export default function App() {
                         {player.bet > 0 ? `Bet: $${player.bet}` : ""}
                       </div>
                       <div className="player-cards">
-                        {player.hand.map((card, idx) =>
-                          showBacks ? (
-                            <div key={idx} className="card back" />
-                          ) : (
-                            <div
-                              key={`${card.suit}-${card.rank}`}
-                              className={`card ${
-                                card.suit === "hearts" ||
-                                card.suit === "diamonds"
-                                  ? "red"
-                                  : ""
-                              }`}
-                              data-rank={card.label}
-                            >
-                              <span className="suit">{SUIT_MAP[card.suit]}</span>
-                            </div>
-                          )
-                        )}
+                        {isBetting &&
+                          player.hand.map((card, idx) =>
+                            showBacks ? (
+                              <div key={idx} className="card back" />
+                            ) : (
+                              <div
+                                key={`${card.suit}-${card.rank}`}
+                                className={`card ${
+                                  card.suit === "hearts" ||
+                                  card.suit === "diamonds"
+                                    ? "red"
+                                    : ""
+                                }`}
+                                data-rank={card.label}
+                              >
+                                <span className="suit">{SUIT_MAP[card.suit]}</span>
+                              </div>
+                            )
+                          )}
                       </div>
                       <div className="player-status">{player.status}</div>
                       {seatEffects.map((effect) => (

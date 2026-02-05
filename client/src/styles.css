@@ -251,15 +251,15 @@ input {
 }
 
 .card {
-  width: clamp(20px, 4.5vh, 46px);
-  height: clamp(28px, 6.2vh, 66px);
+  width: clamp(26px, 5.2vh, 54px);
+  height: clamp(36px, 7.2vh, 76px);
   border-radius: 10px;
   background: #f6f2eb;
   color: #151515;
   display: grid;
   place-items: center;
   font-weight: 700;
-  font-size: 18px;
+  font-size: 16px;
   box-shadow: 0 12px 18px rgba(0, 0, 0, 0.35);
   position: relative;
   animation: deal 0.5s ease;
@@ -458,7 +458,7 @@ input {
 .player-cards {
   display: flex;
   gap: 6px;
-  min-height: 70px;
+  min-height: 76px;
   justify-content: center;
 }
 
