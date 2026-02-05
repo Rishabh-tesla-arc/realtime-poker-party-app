@@ -602,10 +602,9 @@ export default function App() {
         </section>
 
         <aside className="side-panel">
-          {isHost ? (
-            !roomState?.handActive && (
-              <>
-                <div className="panel-card">
+          {isHost && !roomState?.handActive ? (
+            <>
+              <div className="panel-card">
                   <div className="panel-title">Table Info</div>
                   <div className="panel-row">
                     <span>Room</span>
@@ -718,8 +717,8 @@ export default function App() {
                       Update
                     </button>
                   </div>
-                </div>
-                <div className="panel-card">
+              </div>
+              <div className="panel-card">
                   <div className="panel-title">Hand Rankings</div>
                   <button
                     className="btn btn-ghost"
@@ -727,9 +726,8 @@ export default function App() {
                   >
                     View
                   </button>
-                </div>
-              </>
-            )
+              </div>
+            </>
           ) : (
             <div className="panel-card">
               <div className="panel-title">Hand Rankings</div>
