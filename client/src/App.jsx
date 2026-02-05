@@ -309,8 +309,14 @@ export default function App() {
 
   const seatPositions = useMemo(() => {
     const seatCount = seats.length || 1;
-    const radiusX = 38;
-    const radiusY = 42;
+    if (seatCount === 2) {
+      return [
+        { left: "50%", top: "82%" },
+        { left: "50%", top: "18%" },
+      ];
+    }
+    const radiusX = 34;
+    const radiusY = 40;
     return Array.from({ length: seatCount }, (_, index) => {
       const angle = Math.PI / 2 + (2 * Math.PI * index) / seatCount;
       const left = 50 + Math.cos(angle) * radiusX;
@@ -542,11 +548,11 @@ export default function App() {
                     >
                       <div className="avatar" style={{ background: player.avatar }} />
                       <div className="player-info">
-                        <span className={`player-name ${isBetting ? "betting" : ""}`}>
-                          {player.name}
+                        <div className={`player-pill ${isBetting ? "betting" : ""}`}>
                           {isBetting && <span className="betting-dot" />}
-                        </span>
-                        <span className="player-stack">${player.stack}</span>
+                          {player.name}
+                        </div>
+                        <div className="player-pill stack">${player.stack}</div>
                       </div>
                       <div className="player-tags">
                         {player.id === hero?.id && (
@@ -745,8 +751,8 @@ export default function App() {
               ? "Connect to join a table."
               : roomState?.handActive
               ? currentPlayer?.id === hero?.id
-                ? "Your turn - make your move."
-                : `${currentPlayer?.name || "Player"} is thinking...`
+                ? "Your move. Play your hand."
+                : `${currentPlayer?.name || "Player"} to act...`
               : "Waiting to start next hand."}
           </div>
           <div className="chip-rail">
@@ -788,7 +794,7 @@ export default function App() {
           )}
           <div className={`control-group ${compactControls ? "compact" : ""}`}>
             <button
-              className="btn btn-danger"
+              className="btn btn-secondary"
               disabled={!canAct}
               onClick={() => sendAction("PLAYER_ACTION", { action: "fold" })}
             >
