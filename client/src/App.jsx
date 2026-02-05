@@ -74,6 +74,7 @@ export default function App() {
   const [profileName, setProfileName] = useState("");
   const [profileColor, setProfileColor] = useState("");
   const [effects, setEffects] = useState([]);
+  const [winMessage, setWinMessage] = useState("");
   const [expandedPlayerId, setExpandedPlayerId] = useState(null);
   const reconnectTimer = useRef(null);
   const prevStateRef = useRef(null);
@@ -176,6 +177,7 @@ export default function App() {
     const prev = prevStateRef.current;
     if (prev) {
       const nextEffects = [];
+      const winMessages = [];
       roomState.players.forEach((player) => {
         const before = prev.players.find((p) => p.id === player.id);
         if (!before) return;
@@ -189,13 +191,15 @@ export default function App() {
           });
         }
         const stackDelta = player.stack - before.stack;
-        if (stackDelta > 0 && (player.status || "").toLowerCase().includes("win")) {
+        const statusText = (player.status || "").toLowerCase();
+        if (stackDelta > 0 && (statusText.includes("win") || !roomState.handActive)) {
           nextEffects.push({
             id: `${player.id}-win-${Date.now()}`,
             seatIndex: player.seatIndex,
             amount: stackDelta,
             type: "win",
           });
+          winMessages.push(`${player.name} +$${stackDelta}`);
         }
       });
       if (nextEffects.length) {
@@ -205,6 +209,10 @@ export default function App() {
             current.filter((item) => !nextEffects.some((e) => e.id === item.id))
           );
         }, 1400);
+      }
+      if (winMessages.length) {
+        setWinMessage(winMessages.join(" • "));
+        window.setTimeout(() => setWinMessage(""), 3000);
       }
     }
     prevStateRef.current = roomState;
@@ -763,6 +771,7 @@ export default function App() {
                 : `${currentPlayer?.name || "Player"} to act...`
               : "Waiting to start next hand."}
           </div>
+          {winMessage && <div className="win-banner">{winMessage}</div>}
           <div className="chip-rail">
             <span className="chip chip-red" />
             <span className="chip chip-blue" />
