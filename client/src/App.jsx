@@ -99,7 +99,8 @@ export default function App() {
           payload: {
             name: playerName || "Player",
             roomId,
-            hostKey: hostKey || undefined,
+            role: roleChoice || undefined,
+            hostKey: roleChoice === "host" ? hostKey || undefined : undefined,
           },
         })
       );

@@ -641,9 +641,18 @@ wss.on("connection", (ws) => {
     if (!message || !message.type) return;
 
     if (message.type === "JOIN") {
-      const { name, roomId, hostKey } = message.payload || {};
+      const { name, roomId, hostKey, role } = message.payload || {};
       const room = getRoom(roomId || "lobby");
-      if (!room.hostId && (!hostKey || hostKey !== HOST_PASSWORD)) {
+      if (role === "host") {
+        if (room.hostId) {
+          send(ws, { type: "INFO", payload: { text: "Host already online." } });
+          return;
+        }
+        if (!hostKey || hostKey !== HOST_PASSWORD) {
+          send(ws, { type: "INFO", payload: { text: "Invalid host key." } });
+          return;
+        }
+      } else if (!room.hostId) {
         send(ws, { type: "INFO", payload: { text: "Host not online." } });
         return;
       }
@@ -673,7 +682,7 @@ wss.on("connection", (ws) => {
         needsProfile: true,
       };
       room.players.push(player);
-      if (!room.hostId && hostKey && hostKey === HOST_PASSWORD) {
+      if (role === "host") {
         room.hostId = clientId;
       }
       connections.set(ws, { playerId: clientId, roomId: room.id });
